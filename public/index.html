@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Web Crawler</title>
+</head>
+<body>
+
+<h1>Web Crawler</h1>
+
+<label>Adres startowy:</label><br>
+<input id="url" value="https://example.com"><br><br>
+
+<label>Metoda:</label><br>
+<select id="method">
+    <option>BFS</option>
+    <option>DFS</option>
+</select><br><br>
+
+<label>Maksymalna głębokość:</label><br>
+<input type="number" id="depth" value="2"><br><br>
+
+<label>Czas działania (sekundy):</label><br>
+<input type="number" id="time" value="10"><br><br>
+
+<button onclick="start()">Start</button>
+<a href="/csv" target="_blank">Pobierz CSV</a>
+
+<pre id="tree"></pre>
+
+<script>
+async function start() {
+    const res = await fetch("/crawl", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            startUrl: url.value,
+            method: method.value,
+            maxDepth: Number(depth.value),
+            timeLimit: Number(time.value)
+        })
+    });
+
+    const tree = await res.json();
+    treeDiv.textContent = print(tree);
+}
+
+function print(node, indent = "") {
+    let out = indent + node.url + "\n";
+    node.children.forEach(c => {
+        out += print(c, indent + "  ");
+    });
+    return out;
+}
+
+const treeDiv = document.getElementById("tree");
+</script>
+
+</body>
+</html>
