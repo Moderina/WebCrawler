@@ -1,18 +1,12 @@
-import axios from "axios";
-import express from 'express';
-import { parse } from 'node-html-parser';
+const express = require('express');
+const path = require('path');
+const { parse } = require('node-html-parser');
+const cloudscraper = require('cloudscraper')
 
 const app = express();
 
 app.use(express.json());
-app.use(express.static("public"));
-
-let root = null; //root drzewa przeszukiwania
-let visited = []; //zeby duplikatow nie przeszukiwalo
-let url_and_content = []; //tylko dla csv
-let max_children = 10; //ile max dzieci rodzica ma przeszukac dalej (optymalizacja :P)
-let startTime;
-let time_limit = 5;
+app.use(express.static(path.join(path.dirname(process.execPath), 'public')));
 
 app.post("/crawl", async (req, res) => {
     const { startUrl, method, maxDepth, timeLimit, maxChildren } = req.body;
@@ -32,25 +26,35 @@ app.post("/crawl", async (req, res) => {
 });
 
 app.get("/csv", async (req, res) => {
-  const csv = generateCsv(url_and_content);
+    const csv = generateCsv(url_and_content);
 
-  res.setHeader("Content-Type", "text/csv; charset=utf-8");
-  res.setHeader("Content-Disposition", "attachment; filename=pages.csv");
-  res.send(csv);
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", "attachment; filename=pages.csv");
+    res.send(csv);
 });
 
+
 class TreeNode {
-  constructor(url) {
-    this.url = url;
-    this.children = [];
-  }
+    constructor(url) {
+        this.url = url;
+        this.children = [];
+    }
 }
+
+let root = null; //root drzewa przeszukiwania
+let visited = []; //zeby duplikatow nie przeszukiwalo
+let url_and_content = []; //tylko dla csv
+let max_children = 10; //ile max dzieci rodzica ma przeszukac dalej (optymalizacja :P)
+let startTime;
+let time_limit = 5;
+
+
 
 //pobieranie contentu strony
 async function fetchPage(url) {
     try {
-        const res = await axios.get(url, {timeout: 5000});
-        return res.data;
+        const html = await cloudscraper.get(url, {timeout: 5000});
+        return html;
 
     } catch (err) {
         return null; 
@@ -90,7 +94,7 @@ async function dfs(parentNode, depth, maxDepth) {
 
     visited.push(parentNode.url);
 
-    try {
+    // try {
         const page_content = await fetchPage(parentNode.url);
         if (!page_content) return;
         url_and_content.push({ url: parentNode.url, content: extractText(page_content)})
@@ -110,7 +114,7 @@ async function dfs(parentNode, depth, maxDepth) {
 
             await dfs(node, depth+1, maxDepth);
         }
-    } catch {}
+    // } catch {}
 }
 
 async function bfs(rootNode, maxDepth) {
@@ -165,6 +169,9 @@ function generateCsv() {
   return header + body;
 }
 
-app.listen(3000, () =>
-  console.log("http://localhost:3000")
+app.listen(3000, () => {
+    console.log("http://localhost:3000")
+    console.log("^ Open browser with that address");
+    console.log("Ctrl + C or close window to stop app");
+    }
 );
